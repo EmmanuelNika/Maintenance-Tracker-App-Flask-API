@@ -1,21 +1,19 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, abort
+from multiprocessing import Value
 
 app = Flask(__name__)
 
-requests = [
-	{
-		'name': 'Maintenance Requests',
-		'requests' : [
-			{
-				'req_id': '01',
-				'title': 'Replace battery'
-			}
-		]
-	}
-]
+requests = []
+
+counter = Value('i', 0)
+
+def id_generator():
+	with counter.get_lock():
+		counter.value += 1
+		return counter.value
 
 @app.route('/', methods=['GET'])
-def test():
+def index():
     """Renders a sample page."""
     return render_template('index.html')
 
@@ -24,61 +22,43 @@ def test():
 def getAll():
 	return jsonify({'requests':requests})
 
-# GET /requests/<name> 			Fetch a single request by name
-@app.route('/requests/<string:name>', methods=['GET'])
-def get_request(name):
+# GET /requests/<requestId> 			Fetch a single request
+@app.route('/request/<int:req_id>', methods=['GET'])
+def get_request(req_id):
 	for request in requests:
-		if request['name'] == name:
+		if str(request['id']) == str(req_id):
 			return jsonify(request)
-	return jsonify({'message':'request not found'})
+	abort(404)
 
-# GET /requests/<name>/requests			Fetch a request item
-@app.route('/requests/<string:name>/requests', methods=['GET'])
-def get_request_in_requests(name):
-	for request in requests:
-		if request['name'] == name:
-			return jsonify({'requests': request['requests']})
-	return jsonify({'message':'request not found'})
-
-"""
-# GET /requests/<requestId>/title		Fetch a request item
-@app.route('/requests/<string:req_id>/title', methods=['GET'])
-def get_title_in_request(req_id):
-	for request in requests:
-		if request['req_id'] == req_id:
-			return jsonify({'title': request['title']})
-	return jsonify({'message':'request not found'})
-"""
-	
 # POST /requests						Create a request
-@app.route('/requests', methods=['POST'])
+@app.route('/request', methods=['POST'])
 def create_request():
 	request_data = request.get_json()
 	new_request = {
-		'name': request_data['name'],
-		'requests': []
+		'id': id_generator(),
+		'title': request_data['title'],
+		'status': 'In Progress'
 	}
-	requests.append(request_data)
-	return jsonify(new_request)
+	requests.append(new_request)
+	return jsonify(new_request), 201
 
-# POST /requests/<string:id>/request	Create a request
-@app.route('/requests/<string:name>/requests', methods=['POST'])
-def create_title_in_request(name):
+# POST /requests/<string:id>/cleared	Attend to a request
+@app.route('/request/<int:req_id>/cleared', methods=['POST'])
+def create_title_in_request(req_id):
 	request_data = request.get_json()
 	for req in requests:
-		if req['name'] == name:
-			new_request = {
-				'req_id': request_data['req_id'],
-				'title': request_data['title']
-			}
-			req['requests'].append(request_data)
-			return jsonify(new_request)
-	return jsonify({'message': 'request not found'})
+		if str(req['id']) == str(req_id):
+			requests[0]['status'] = request.json['status']
+			return jsonify(requests), 201
+	abort(404)
 
-# POST /requests/<requestId>cleared	Attend to a request
-@app.route('/requests/<string:req_id>cleared', methods=['PUT'])
-def update_request(req_id):
-	pass
+@app.errorhandler(404)
+def page_not_found(e):
+	return jsonify({'message': 'request not found'}), 404
+
+@app.errorhandler(405)
+def request_not_supported(e):
+	return render_template("405.html")
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=5555)
