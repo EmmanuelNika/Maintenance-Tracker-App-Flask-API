@@ -3,15 +3,6 @@ from flask_restful import Resource, reqparse
 from multiprocessing import Value
 from models.maintenance_requests import RequestModel
 
-"""requests = []
-
-counter = Value('i', 0)
-
-def id_generator():
-	with counter.get_lock():
-		counter.value += 1
-		return counter.value"""
-
 class Request(Resource):
 	parser = reqparse.RequestParser()
 	parser.add_argument('price',
@@ -23,30 +14,11 @@ class Request(Resource):
 		required=True,
 		)
 
-	"""def get(self, title):
-					for request in requests:
-						if request['title'] == title:
-							return jsonify(request)
-					abort(404, 'The requested URL was not found')
-			"""
-
 	def get(self, title):
 		request_item = RequestModel.find_by_title(title)
 		if request_item:
 			return request_item.json()
 		return {"Message": 'Item not found'}, 404
-
-	"""def post(self, title):
-					request_data = request.get_json()
-			
-					new_request = {
-						'req_id': id_generator(),
-						'title': title,
-						'status': request_data['status'],
-						'price': request_data['price']
-					}
-					requests.append(new_request)
-					return make_response(jsonify(new_request), 201)"""
 
 	def post(self, title):
 
@@ -64,27 +36,12 @@ class Request(Resource):
 		
 		return request_item.json(), 201
 
-	"""def delete(self, title):
-					global requests
-					requests = list(filter(lambda x: x['title'] != title, requests))
-					return {'message': 'Request deleted'}"""
-
 	def delete(self, title):
 		request_item = RequestModel.find_by_title(title)
 		if request_item:
 			request_item.delete_from_db()
 
 		return {"Message": "Request has been deleted."}
-
-	"""def put(self, title):
-					data = request.get_json()
-					req = next(iter(filter(lambda x: x['title'] == title, requests)), None)
-					if req is None:
-						req = {'title': data['title'], 'status': data['status']}
-						requests.append(req)
-					else:
-						req.update(data)
-					return req"""
 
 	def put(self, title):
 		data = Request.parser.parse_args()
@@ -109,10 +66,10 @@ class Item(Resource):
 
 	def get(self, req_id):
 		request_item = RequestModel.find_by_id(req_id)
-		"""if request_item:
-									return request_item.json()
-								return {"Message": 'Item not found'}, 404
-						"""
+		if request_item:
+			return request_item.json()
+		return {"Message": 'Item not found'}, 404
+				
 	def delete(self, req_id):
 		global requests
 		requests = list(filter(lambda x: x['req_id'] != req_id, requests))

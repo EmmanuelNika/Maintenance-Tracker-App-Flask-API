@@ -1,4 +1,3 @@
-import sqlite3
 from db import db
 
 class RequestModel(db.Model):
@@ -23,9 +22,9 @@ class RequestModel(db.Model):
 	def find_by_title(cls, title):
 		return cls.query.filter_by(title=title).first()
 
+	@classmethod
 	def find_by_id(cls, req_id):
-		return {"id": req_id}
-	#	return cls.query.filter_by(id=req_id).first()
+		return cls.query.filter_by(id=req_id).first()
 
 	def save_to_db(self):
 		db.session.add(self)
